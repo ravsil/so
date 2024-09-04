@@ -31,11 +31,11 @@ void changeDir(char *buffer, char *curDir)
 
 void help(char *curDir)
 {
-	printf("Se o comando 'cd' for executado juntamente de outro comando, o segundo argumento nao funcionara\n");
+	printf("O comando cd nao pode ser executado juntamente de nenhum outro\n");
 	printf("caso1: echo hello && cd ..\n");
 	printf("'cd ..' nao sera executado\n");
 	printf("caso2: cd .. && echo hello\n");
-	printf("'echo hello' nao sera executado\n\n");
+	printf("ambos os comandos irao falhar\n\n");
 	printf("Alguns programas como vi nao funcionam como deveriam\n\n");
 	printDir(curDir);
 }
