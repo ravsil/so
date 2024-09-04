@@ -102,7 +102,6 @@ int main()
 			}
 			else if (strcmp(cmd, "ajuda") == 0)
 			{
-				printf("Alguns programas como vi nao funcionam como deveriam\n");
 				printf("Nao eh possivel navegar pelo texto, eh necessario apaga-lo\n");
 			}
 			else if (strcmp(cmd, "exit") == 0)
