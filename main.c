@@ -3,14 +3,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 #define RED "\033[1;31m\e[1m"
 #define BLUE "\033[0;34m\e[1m"
 #define GREEN "\033[0;32m\e[1m"
 #define RESET "\033[0m"
 
-void printDir(char *curDir)
+void printDir(char *curDir, int waiting, int *child)
 {
+	int status;
+	// wait for child to finish before printing
+	if (waiting)
+	{
+		while ((*child = wait(&status)) > 0)
+		{
+			continue;
+		}
+	}
 	printf(BLUE);
 	printf("%s", getcwd(curDir, 255));
 	printf(GREEN);
@@ -18,62 +28,84 @@ void printDir(char *curDir)
 	printf(RESET);
 }
 
-void changeDir(char *buffer, char *curDir)
+void changeDir(char *cmd)
 {
-	if (chdir(buffer) == -1)
+	if (chdir(cmd) == -1)
 	{
 		printf(RED);
-		printf("Erro: caminho '%s' nao encontrado\n", buffer);
+		printf("Erro: caminho '%s' nao encontrado\n", cmd);
 		printf(RESET);
 	}
-	printDir(curDir);
 }
 
-void help(char *curDir)
+void getCommand(char *buffer, char *cmd, int *listen)
 {
-	printf("O comando cd nao pode ser executado juntamente de nenhum outro\n");
-	printf("caso1: echo hello && cd ..\n");
-	printf("'cd ..' nao sera executado\n");
-	printf("caso2: cd .. && echo hello\n");
-	printf("ambos os comandos irao falhar\n\n");
-	printf("Alguns programas como vi nao funcionam como deveriam\n\n");
-	printDir(curDir);
+	if (*listen)
+	{
+		fgets(buffer, 255, stdin);
+	}
+
+	for (int i = 0; i < strlen(buffer); i++)
+	{
+		// copy buffer to cmd
+		cmd[i] = buffer[i];
+		if (buffer[i] == '&' && buffer[i + 1] == '&')
+		{
+			// stop cmd right before &
+			cmd[i - 1] = '\0';
+			*listen = 0;
+			strcpy(buffer, buffer + i + 3);
+			break;
+		}
+		if (buffer[i] == '\n')
+		{
+			cmd[i] = '\0';
+			*listen = 1;
+			break;
+		}
+	}
 }
 
 int main()
 {
 	// ignore ctrl+c
 	signal(SIGINT, SIG_IGN);
-
-	char buffer[255];
+	// starts as \n to print the current directory
+	char buffer[255] = "\n";
+	char cmd[255];
 	char curDir[255];
+
 	int id = -1;
+	int listen = 0;
 
 	printf("Digite 'ajuda' para ajuda\n");
-	printDir(curDir);
 	while (1)
 	{
 		// child id == 0
 		if (id == 0)
 		{
-			system(buffer);
-			printDir(curDir);
+			system(cmd);
 			break;
 		}
 		else
 		{
-			fgets(buffer, 255, stdin);
-			// remove \n
-			buffer[strlen(buffer) - 1] = '\0';
-			if (buffer[0] == 'c' && buffer[1] == 'd' && buffer[2] == ' ')
+			if (listen)
 			{
-				changeDir(buffer + 3, curDir);
+				printDir(curDir, 1, &id);
 			}
-			else if (strcmp(buffer, "ajuda") == 0)
+
+			getCommand(buffer, cmd, &listen);
+
+			if (cmd[0] == 'c' && cmd[1] == 'd' && cmd[2] == ' ')
 			{
-				help(curDir);
+				changeDir(cmd + 3);
 			}
-			else if (strcmp(buffer, "exit") == 0)
+			else if (strcmp(cmd, "ajuda") == 0)
+			{
+				printf("Alguns programas como vi nao funcionam como deveriam\n");
+				printf("Nao eh possivel navegar pelo texto, eh necessario apaga-lo\n");
+			}
+			else if (strcmp(cmd, "exit") == 0)
 			{
 				break;
 			}
