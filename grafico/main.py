@@ -66,6 +66,8 @@ class Chart:
         
         self.values = []
         for i in range(len(switch)):
+            if 'swapper' in switch[i][1]:
+                continue
             if i < len(switch) - 1:
                 self.values.append((switch[i][0], switch[i][1]))
                 self.values.append((switch[i+1][0], switch[i][1]))
@@ -80,11 +82,10 @@ class Chart:
             self.ax.plot(df['timestamp'][i:i+2], df['process_name'][i:i+2], color='green', marker='o', linestyle='')
         
         for i in range(len(df2) - 1):
-            color = 'skyblue' if 'swapper/' not in df2['next_process'][i] else 'orange'
             if i % 2 == 0:
-                self.ax.plot(df2['timestamp'][i:i+2], df2['next_process'][i:i+2], color=color, marker='o')
+                self.ax.plot(df2['timestamp'][i:i+2], df2['next_process'][i:i+2], color='skyblue', marker='o')
             else:
-                self.ax.plot(df2['timestamp'][i:i+2], df2['next_process'][i:i+2], color=color, marker='o', linestyle='')
+                self.ax.plot(df2['timestamp'][i:i+2], df2['next_process'][i:i+2], color='skyblue', marker='o', linestyle='')
 
         self.ax.set_xlabel('Tempo (s)')
         self.ax.set_ylabel('Próximo processo')
