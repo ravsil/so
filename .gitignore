@@ -1,4 +1,5 @@
 */*
+!paralelismo/*
 !*.c
 !*.txt
 !*.py
