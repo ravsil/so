@@ -15,7 +15,7 @@ typedef struct channel
 void cria_channel(Channel *channel, int size)
 {
     channel->buffer = (int *)malloc(size * sizeof(int));
-    channel->size = size;
+    channel->size = size + 1;
     channel->start = 0;
     channel->end = 0;
     channel->open = 1;

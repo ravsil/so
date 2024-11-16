@@ -15,7 +15,7 @@ typedef struct complex_channel
 void cria_complex_channel(ComplexChannel *channel, int size)
 {
     channel->buffer = (void **)malloc(size * sizeof(void *));
-    channel->size = size;
+    channel->size = size + 1;
     channel->start = 0;
     channel->end = 0;
     channel->open = 1;
@@ -23,7 +23,7 @@ void cria_complex_channel(ComplexChannel *channel, int size)
     pthread_cond_init(&channel->cond, NULL);
 }
 
-void send_coplex(ComplexChannel *channel, void *value)
+void send_complex(ComplexChannel *channel, void *value)
 {
     if (!channel->open)
     {
@@ -62,7 +62,7 @@ void fechar_complex_channel(ComplexChannel *channel)
     pthread_mutex_unlock(&channel->lock);
 }
 
-void excluir(ComplexChannel *channel)
+void excluir_complex_channel(ComplexChannel *channel)
 {
     free(channel->buffer);
     pthread_mutex_destroy(&channel->lock);
