@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "paralelismo/paralelismo.h"
-#include <pthread.h>
 
 void total(AtomicInt *tally)
 {
@@ -26,7 +25,6 @@ void complex_sender(ComplexChannel *cch)
 typedef struct args
 {
     Semaforo sem;
-    WaitGroup wg;
     int val;
 } Args;
 
@@ -38,31 +36,32 @@ void somador(Args *args)
         args->val += 1;   // região crítica
         up(&args->sem);   // incrementa o semáforo
     }
-    done(&args->wg); // sinaliza que a thread terminou
 }
 
 int main()
 {
     // inteiro atômico, permite apenas que uma thread acessar o valor por vez
     AtomicInt tally;
+    WaitGroup wg;
     cria_atomic(&tally, 0);
+    cria_wait_group(&wg);
 
-    pthread_t t1, t2;
     // a função total incrementa o valor de tally 50 vezes
-    pthread_create(&t1, NULL, (void *)total, &tally);
-    pthread_create(&t2, NULL, (void *)total, &tally);
-    pthread_join(t1, NULL); // espera a 1 thread terminar
-    pthread_join(t2, NULL); // espera a 2 thread terminar
+    cria_thread(total, &tally, &wg);
+    cria_thread(total, &tally, &wg);
+    wait(&wg); // espera as threads terminarem
+
     // o valor impresso sempre será o mesmo devido à natureza do tipo atômico
     printf("Total: %d\n", atomic_get(&tally));
     excluir_atomic(&tally);
+    excluir_wait_group(&wg);
 
     // channels permitem a troca de mensagens entre threads
     Channel ch;
     cria_channel(&ch, 10); // cria um channel com espaço para 10 valores
-    pthread_t t3;
+
     // a função sender envia 10 valores para o canal
-    pthread_create(&t3, NULL, (void *)sender, &ch);
+    cria_thread(sender, &ch, NULL);
     for (int i = 0; i < 10; i++)
     {
         int value;
@@ -75,9 +74,9 @@ int main()
     // complex channels permitem a troca de mensagens de qualquer tipo
     ComplexChannel cch;
     cria_complex_channel(&cch, 1); // cria um complex channel com espaço para 1 valor
-    pthread_t t4;
+
     // a função complex_sender envia uma string para o canal
-    pthread_create(&t4, NULL, (void *)complex_sender, &cch);
+    cria_thread(complex_sender, &cch, NULL);
     char *value;
     // bloqueia a execução até que um valor seja recebido
     receive_complex(&cch, (void **)&value);
@@ -89,18 +88,16 @@ int main()
     args.val = 0;
     // cria um semáforo com valor inicial 1
     cria_semaforo(&args.sem, 1);
-    // cria um wait group
-    cria_wait_group(&args.wg);
-    // adiciona 2 threads à fila de espera
-    add(&args.wg, 2);
-    pthread_t t5, t6;
+
+    cria_wait_group(&wg);
     // a função somador incrementa o valor de args->val 50 vezes
-    pthread_create(&t5, NULL, (void *)somador, &args);
-    pthread_create(&t6, NULL, (void *)somador, &args);
-    wait(&args.wg); // espera as threads terminarem
+    cria_thread(somador, &args, &wg);
+    cria_thread(somador, &args, &wg);
+    cria_thread(somador, &args, &wg);
+    wait(&wg); // espera as threads terminarem
     printf("Valor: %d\n", args.val);
     excluir_semaforo(&args.sem);
-    excluir_wait_group(&args.wg);
+    excluir_wait_group(&wg);
 
     return 0;
 }

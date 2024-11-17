@@ -6,6 +6,7 @@
 #include "cond.h"
 #include "mutex.h"
 #include "semaforo.h"
+#include "thread.h"
 #include "wait_group.h"
 
 #endif
