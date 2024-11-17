@@ -1,5 +1,8 @@
-#include <pthread.h>
+#pragma once
 #include <stdlib.h>
+
+#include "mutex.h"
+#include "cond.h"
 
 typedef struct complex_channel
 {
@@ -8,8 +11,8 @@ typedef struct complex_channel
     int start;
     int end;
     int open;
-    pthread_mutex_t lock;
-    pthread_cond_t cond;
+    Mutex lock;
+    Cond cond;
 } ComplexChannel;
 
 void cria_complex_channel(ComplexChannel *channel, int size)
@@ -19,8 +22,8 @@ void cria_complex_channel(ComplexChannel *channel, int size)
     channel->start = 0;
     channel->end = 0;
     channel->open = 1;
-    pthread_mutex_init(&channel->lock, NULL);
-    pthread_cond_init(&channel->cond, NULL);
+    cria_mutex(&channel->lock);
+    cria_cond(&channel->cond);
 }
 
 void send_complex(ComplexChannel *channel, void *value)
@@ -30,41 +33,41 @@ void send_complex(ComplexChannel *channel, void *value)
         return;
     }
 
-    pthread_mutex_lock(&channel->lock);
+    mutex_lock(&channel->lock);
     while ((channel->end + 1) % channel->size == channel->start)
     {
-        pthread_cond_wait(&channel->cond, &channel->lock);
+        cond_wait(&channel->cond, &channel->lock);
     }
     channel->buffer[channel->end] = value;
     channel->end = (channel->end + 1) % channel->size;
-    pthread_cond_signal(&channel->cond);
-    pthread_mutex_unlock(&channel->lock);
+    cond_signal(&channel->cond);
+    mutex_unlock(&channel->lock);
 }
 
 void receive_complex(ComplexChannel *channel, void **value)
 {
-    pthread_mutex_lock(&channel->lock);
+    mutex_lock(&channel->lock);
     while (channel->start == channel->end && channel->open)
     {
-        pthread_cond_wait(&channel->cond, &channel->lock);
+        cond_wait(&channel->cond, &channel->lock);
     }
     *value = (channel->open) ? channel->buffer[channel->start] : 0;
     channel->start = (channel->start + 1) % channel->size;
-    pthread_cond_signal(&channel->cond);
-    pthread_mutex_unlock(&channel->lock);
+    cond_signal(&channel->cond);
+    mutex_unlock(&channel->lock);
 }
 
 void fechar_complex_channel(ComplexChannel *channel)
 {
-    pthread_mutex_lock(&channel->lock);
+    mutex_lock(&channel->lock);
     channel->open = 0;
-    pthread_cond_broadcast(&channel->cond);
-    pthread_mutex_unlock(&channel->lock);
+    cond_broadcast(&channel->cond);
+    mutex_unlock(&channel->lock);
 }
 
 void excluir_complex_channel(ComplexChannel *channel)
 {
     free(channel->buffer);
-    pthread_mutex_destroy(&channel->lock);
-    pthread_cond_destroy(&channel->cond);
+    excluir_mutex(&channel->lock);
+    excluir_cond(&channel->cond);
 }

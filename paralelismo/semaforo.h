@@ -1,40 +1,42 @@
-#include <pthread.h>
+#pragma once
+#include "mutex.h"
+#include "cond.h"
 
 typedef struct semaforo
 {
     int value;
-    pthread_mutex_t lock;
-    pthread_cond_t cond;
+    Mutex lock;
+    Cond cond;
 } Semaforo;
 
 void cria_semaforo(Semaforo *semaforo, int value)
 {
     semaforo->value = value;
-    pthread_mutex_init(&semaforo->lock, NULL);
-    pthread_cond_init(&semaforo->cond, NULL);
+    cria_mutex(&semaforo->lock);
+    cria_cond(&semaforo->cond);
 }
 
 void up(Semaforo *semaforo)
 {
-    pthread_mutex_lock(&semaforo->lock);
+    mutex_lock(&semaforo->lock);
     semaforo->value++;
-    pthread_cond_signal(&semaforo->cond);
-    pthread_mutex_unlock(&semaforo->lock);
+    cond_signal(&semaforo->cond);
+    mutex_unlock(&semaforo->lock);
 }
 
 void down(Semaforo *semaforo)
 {
-    pthread_mutex_lock(&semaforo->lock);
+    mutex_lock(&semaforo->lock);
     while (semaforo->value == 0)
     {
-        pthread_cond_wait(&semaforo->cond, &semaforo->lock);
+        cond_wait(&semaforo->cond, &semaforo->lock);
     }
     semaforo->value--;
-    pthread_mutex_unlock(&semaforo->lock);
+    mutex_unlock(&semaforo->lock);
 }
 
 void excluir_semaforo(Semaforo *semaforo)
 {
-    pthread_mutex_destroy(&semaforo->lock);
-    pthread_cond_destroy(&semaforo->cond);
+    excluir_mutex(&semaforo->lock);
+    excluir_cond(&semaforo->cond);
 }
