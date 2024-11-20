@@ -99,5 +99,12 @@ int main()
     excluir_semaforo(&args.sem);
     excluir_wait_group(&wg);
 
+    // teste de deadlock
+    cria_channel(&ch, 1); // cria um channel com 1 espaço
+    cria_wait_group(&wg);
+    cria_thread(sender, &ch, &wg); // cria uma thread que envia valores para o channel
+    // nao ha nenhuma thread para receber os valores
+    wait(&wg); // espera a thread terminar
+    // como o valor nunca sera recebido por ninguem, o programa entra em deadlock
     return 0;
 }

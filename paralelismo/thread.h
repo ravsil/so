@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "wait_group.h"
+#include "cond.h"
 
 #define THREAD_STACK_SIZE 1024 * 1024
 #define CLONE_FS 0x00000200
@@ -28,6 +29,7 @@ static int thread_wrapper(void *wrapper_arg)
     {
         done(args->wg);
     }
+    atomic_decrement(&nThreads);
 
     free(args);
     return 0;
@@ -35,6 +37,14 @@ static int thread_wrapper(void *wrapper_arg)
 
 int cria_thread_generico(void (*func)(void *), void *arg, WaitGroup *wg)
 {
+    if (first)
+    {
+        first = 0;
+        cria_atomic(&nThreads, 0);
+        atomic_increment(&nThreads); // conta a thread principal
+    }
+    atomic_increment(&nThreads);
+
     void *stack = malloc(THREAD_STACK_SIZE);
     if (!stack)
     {
