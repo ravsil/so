@@ -1,3 +1,14 @@
+/* 
+Ferramentas como prstat (Solaris) e plockstat ajudam a identificar contenção em malloc() e free(), fornecendo métricas como:
+ - Porcentagem de tempo gasto esperando bloqueios.
+ - Contagem de giros (spinlocks) e tempo médio gasto bloqueado.
+ 
+ */
+
+
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,6 +26,25 @@ typedef struct Block {
 // Ponteiro para o início do heap gerenciado
 void* heap_start = NULL;  // Armazena a base do espaço de memória alocado
 Block* free_list = NULL;  // Ponteiro para a lista de blocos livres
+
+/**
+ * Função para coalescer blocos adjacentes livres.
+ */
+void coalesce_free_blocks() {
+    Block* current = free_list;
+
+    while (current && current->next) {
+        // Verifica se o bloco atual e o próximo são livres
+        if (current->is_free && current->next->is_free) {
+            // Junta os blocos adjacentes
+            current->size += current->next->size + sizeof(Block);
+            current->next = current->next->next;
+        } else {
+            current = current->next; // Avança para o próximo bloco
+        }
+    }
+}
+
 
 /**
  * Inicializa o gerenciador de memória.
@@ -87,16 +117,18 @@ void* MyMalloc(int size) {
  * @return Retorna 1 em caso de sucesso e 0 se o ponteiro for inválido.
  */
 int MyMallocFree(void* ptr) {
-    // Verifica se o ponteiro é nulo
-    if (!ptr) return 0;
 
-    // Obtém o cabeçalho do bloco associado ao ponteiro
-    Block* block = (Block*)((char*)ptr - BLOCK_SIZE);
+    if (!ptr) return;
 
-    // Marca o bloco como livre
-    block->free = 1;
+    Block* block = (Block*)((char*)ptr - sizeof(Block)); // Obtem o cabeçalho do bloco
+    block->is_free = 1; // Marca o bloco como livre
 
-    // TODO: Implementar coalescência (união de blocos livres adjacentes)
+    // Adiciona o bloco à lista de blocos livres
+    block->next = free_list;
+    free_list = block;
+
+    // Tenta coalescer blocos adjacentes
+    coalesce_free_blocks();
 
     return 1;
 }
